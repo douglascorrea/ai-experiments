@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Experiments — Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>AI <span>Experiments</span></h1>
+        <p class="sub">Prefill / decode throughput tracking — one row per run.</p>
+        <div class="chips">
+          <span class="chip">git + gh</span>
+          <span class="chip">GitHub</span>
+          <span class="chip">static html/css/js</span>
+          <span class="chip">data/data.js</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="add-run" class="btn primary">+ Add run</button>
+        <button id="export" class="btn">Export JSON</button>
+      </div>
+    </header>
+
+    <section class="kpis">
+      <div class="card kpi"><div class="kpi-label">runs</div><div id="kpi-count" class="kpi-value">0</div></div>
+      <div class="card kpi"><div class="kpi-label">latest</div><div id="kpi-last" class="kpi-value">—</div></div>
+      <div class="card kpi"><div class="kpi-label">best prefill</div><div id="kpi-best" class="kpi-value">—</div></div>
+      <div class="card kpi"><div class="kpi-label">avg decode</div><div id="kpi-avg" class="kpi-value">—</div></div>
+    </section>
+
+    <section class="grid-2">
+      <div class="card chart-card">
+        <div class="card-head">
+          <h2>Prefill + decode tok/s by model</h2>
+        </div>
+        <p class="note" style="margin-top:-6px; margin-bottom:14px;">Best observed per model · stacked: <code>prefill</code> + <code>decode</code></p>
+        <div class="chart-box"><svg id="chart"></svg></div>
+        <div class="legend">
+          <span><i class="lg-prefill"></i>prefill tok/s</span>
+          <span><i class="lg-decode"></i>decode tok/s</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Stack</h2>
+        <ul class="stack">
+          <li><code>GitHub</code> repo + <code>gh</code> CLI — every run versioned &amp; pushable</li>
+          <li><code>git</code> — commit per experiment, history = experiment log</li>
+          <li><code>HTML / CSS / JS</code> — static site, no build, no framework, no deps</li>
+          <li><code>data/data.js</code> — single JSON-ish source of truth</li>
+          <li><code>python http.server</code> / GitHub Pages — one command to view</li>
+        </ul>
+        <p class="note" style="margin-top:14px;">View: <code>cd ~/Sites/ai-experiments && python3 -m http.server 8000</code></p>
+      </div>
+    </section>
+
+    <section class="card table-card">
+      <div class="card-head">
+        <h2 style="font-size:18px; letter-spacing:0; text-transform:none;">Runs</h2>
+        <input id="filter" class="filter" type="search" placeholder="filter: model · provider · hardware · notes">
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>date</th><th>model</th><th>provider</th><th>hardware</th><th>prefill</th><th>decode</th><th>prompt</th><th>batch</th><th>notes</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <p id="empty" class="empty">No experiments yet. Click <strong>+ Add run</strong> or edit <code style="font-family:var(--mono); font-size:12px;">data/data.js</code>.</p>
+      </div>
+    </section>
+  </div>
+
+  <dialog id="modal">
+    <div class="modal-body">
+      <h2>New experiment run</h2>
+      <p class="sub">Add a run to this page, then hit <strong>Export JSON</strong> and commit <code style="font-family:var(--mono)">data.js</code> to persist it.</p>
+      <form id="run-form">
+        <div class="field">
+          <label for="run-date">Date</label>
+          <input type="date" id="run-date" required>
+        </div>
+        <div class="field">
+          <label for="run-model">Model / endpoint</label>
+          <input id="run-model" type="text" required placeholder="Llama-3.1-8B-Instruct">
+        </div>
+        <div class="field">
+          <label for="run-provider">Provider</label>
+          <select id="run-provider">
+            <option>local</option>
+            <option>cloud-api</option>
+            <option>other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="run-hw">Hardware / machine</label>
+          <input id="run-hw" type="text" placeholder="RTX 4090 · A100 · M4 Max">
+        </div>
+        <div class="field">
+          <label for="run-prefill">Prefill tok/s <small>prompt phase</small></label>
+          <input id="run-prefill" type="number" step="any" min="0" placeholder="e.g. 11800">
+        </div>
+        <div class="field">
+          <label for="run-decode">Decode tok/s <small>generation</small></label>
+          <input id="run-decode" type="number" step="any" min="0" placeholder="e.g. 1950">
+        </div>
+        <div class="field">
+          <label for="run-prompt">Prompt tokens <small>optional</small></label>
+          <input id="run-prompt" type="number" step="any" min="0" placeholder="e.g. 4096">
+        </div>
+        <div class="field">
+          <label for="run-batch">Batch <small>optional</small></label>
+          <input id="run-batch" type="number" step="any" min="0" placeholder="e.g. 1">
+        </div>
+        <div class="field full">
+          <label for="run-notes">Notes</label>
+          <textarea id="run-notes" placeholder="software, flags, quirks, comparisons…"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn" id="cancel-run">Cancel</button>
+          <button type="submit" class="btn primary">Save run</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <div id="toast"></div>
+
+  <script src="data/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
